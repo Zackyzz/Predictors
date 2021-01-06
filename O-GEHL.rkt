@@ -1,13 +1,6 @@
 #lang racket
 
-(define benchmarks (list (file->lines "./traces/fbubble.tra")
-                         (file->lines "./traces/fmatrix.tra")
-                         (file->lines "./traces/fperm.tra")
-                         (file->lines "./traces/fpuzzle.tra")
-                         (file->lines "./traces/fqueens.tra")
-                         (file->lines "./traces/fsort.tra")
-                         (file->lines "./traces/ftree.tra")
-                         (file->lines "./traces/ftower.tra")))
+(provide go-traces)
 
 (define M 8)
 (define WIDTH 4)
@@ -59,8 +52,7 @@
   (define theta M)
   (let loop ([HRg 0] [n-correct 0] [total 0] [clone trace])
     (cond
-      [(empty? clone) ;(printf "~a ~a\n" total (/ (* 1000.0 (- total n-correct)) total))
-       (/ (* 100.0 n-correct) total)]
+      [(empty? clone) (/ (* 100.0 n-correct) total)]
       [else
        (define branch (string-split (first clone) " "))
        (define PC (string->number (second branch)))
@@ -94,12 +86,5 @@
              (rest clone))])))
 
 (define (go-traces benchmarks)
-  (exact->inexact
-   (/ (for/fold ([total 0])
-                ([trace benchmarks])
-        (define accuracy (go-trace trace))
-        (printf "~a\n" accuracy)
-        (+ total accuracy))
-      (length benchmarks))))
-
-(go-traces benchmarks)
+  (for/list ([trace benchmarks])
+    (go-trace trace)))
