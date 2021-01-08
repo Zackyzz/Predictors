@@ -67,11 +67,6 @@
              (+ 1 total)
              (rest clone))])))
 
-(define (transpose matrix)
-  (for/list ([i (length (list-ref matrix 0))])
-    (for/list ([j matrix])
-      (list-ref j i))))
-
 (define (go->L-TAGE benchmarks [M 8])
-  (transpose (for/list ([trace benchmarks])
+  (apply map list (for/list ([trace benchmarks])
                (go-trace trace M))))

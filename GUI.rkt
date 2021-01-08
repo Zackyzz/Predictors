@@ -1,7 +1,6 @@
 #lang racket/gui
 
-(require "O-GEHL.rkt")
-(require "L-TAGE.rkt")
+(require "O-GEHL.rkt" "L-TAGE.rkt")
 
 (define benchmarks (list (file->lines "./traces/fbubble.tra")
                          (file->lines "./traces/fmatrix.tra")
