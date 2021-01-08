@@ -1,6 +1,6 @@
 #lang racket
 
-(provide go->O-GEHL)
+(provide go->L-TAGE)
 
 (define WIDTH 4)
 (define MAX 32)
@@ -19,10 +19,13 @@
       PC
       (^ (remainder HRg L) PC)))
 
-(define (get-prediction HRg PC tables [M 8])
-  (for/fold ([sum (/ M 2)])
-            ([T tables] [i (in-range M)])
-    (+ sum (hash-ref T (get-index HRg PC i) 0))))
+(define (get-prediction HRg PC tables M)
+  (let loop ([i (- M 1)])
+    (define tag-val (hash-ref (list-ref tables i) (get-index HRg PC i) 0))
+    (cond
+      [(= i 0) (list tag-val i)]
+      [(not (= 0 tag-val)) (list tag-val i)]
+      [else (loop (- i 1))])))
 
 (define (saturated-counter value [range WIDTH])
   (define CW (<< 1 (- range 1)))
@@ -35,44 +38,29 @@
   (define value (operation (hash-ref table index 0) new-val))
   (hash-set! table index (saturated-counter value)))
 
-(define (update-tables HRg PC taken? tables [M 8])
-  (for ([T tables] [i (in-range M)])
-    (modify-counter T (get-index HRg PC i) (if taken? + -))))
+(define (update-tables HRg PC taken? tables index [M 8])
+  (modify-counter (list-ref tables index) (get-index HRg PC index) (if taken? + -))
+  (when (< index (- M 1))
+    (modify-counter (list-ref tables (+ 1 index)) (get-index HRg PC (+ 1 index)) (if taken? + -))))
 
 (define (go-trace trace [M 8])
   (define predictors (for/list ([i (in-range M)])
                        (make-hash)))
-  (define TC 0)
-  (define theta M)
   (let loop ([HRg 0] [n-correct 0] [total 0] [clone trace])
     (cond
       [(empty? clone) (list total n-correct (/ (* 100.0 n-correct) total))]
       [else
        (define branch (string-split (first clone) " "))
        (define PC (string->number (second branch)))
-       (define S (get-prediction HRg PC predictors M))
+       (define mathcing-component (get-prediction HRg PC predictors M))
+       (define matching-val (first mathcing-component))
        
-       (define my-prediction (if (positive? S) 1 0))
+       (define my-prediction (if (positive? matching-val) 1 0))
        (define outcome (if (equal? (first branch) "NT") 0 1))
        (define comparison (= my-prediction outcome))
-
-       (when (not comparison)
-         (set! TC (+ TC 1))
-         (when (> TC MAX)
-           (set! TC MAX)
-           (when (< theta (* 2 MAX))
-             (set! TC 0)
-             (set! theta (+ theta 1)))))
-       (when (and comparison (<= (abs S) theta))
-         (set! TC (- TC 1))
-         (when (< TC (- MAX))
-           (set! TC (- MAX))
-           (when (> theta 0)
-             (set! TC 0)
-             (set! theta (- theta 1)))))
-
-       (when (or (not comparison) (<= (abs S) theta))
-         (update-tables HRg PC (= outcome 1) predictors M))
+       
+       (when (or (not comparison) (<= (abs matching-val) (/ M 2)))
+         (update-tables HRg PC (= outcome 1) predictors (second mathcing-component) M))
        
        (loop (update-history HRg outcome M)
              (if comparison (+ 1 n-correct) n-correct)
@@ -84,6 +72,6 @@
     (for/list ([j matrix])
       (list-ref j i))))
 
-(define (go->O-GEHL benchmarks [M 8])
+(define (go->L-TAGE benchmarks [M 8])
   (transpose (for/list ([trace benchmarks])
                (go-trace trace M))))
